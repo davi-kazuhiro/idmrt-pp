@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>IDMRT-PP — Diagnóstico de Maturidade de Recursos Técnicos</title>
+<script>
+(function(){
+  var t = 'auto';
+  try{ t = localStorage.getItem('idmrt-tema') || 'auto'; }catch(e){}
+  if (['auto','light','dark'].indexOf(t) < 0) t = 'auto';
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+<style>
+:root{
+  --ink:#1b1b1b;
+  --ink-soft:#555;
+  --ink-faint:#777;
+  --bg:#ffffff;
+  --rule:#ccc;
+  --rule-soft:#e6e6e6;
+  --blue:#12508c;
+  --blue-soft:#eef3f9;
+  --amber:#8a5a00;
+  --amber-soft:#fbf4e6;
+  --surface:#ffffff;
+  --accent-fill:#12508c;
+  --on-accent:#ffffff;
+  --on-accent-soft:#dfe8f2;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+/* tema escuro: automático (segue o sistema) ou escolhido manualmente */
+@media (prefers-color-scheme:dark){
+  :root[data-theme="auto"],:root:not([data-theme]){
+    --ink:#e6e6e6;--ink-soft:#b4b4b4;--ink-faint:#8e8e8e;
+    --bg:#131417;--surface:#1b1d21;--rule:#3b3e45;--rule-soft:#2a2c31;
+    --blue:#7cb1e6;--blue-soft:#172538;--amber:#e3ab4f;--amber-soft:#2a2114;
+    --accent-fill:#2c68a6;--on-accent:#ffffff;--on-accent-soft:#d6e4f3;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#e6e6e6;--ink-soft:#b4b4b4;--ink-faint:#8e8e8e;
+  --bg:#131417;--surface:#1b1d21;--rule:#3b3e45;--rule-soft:#2a2c31;
+  --blue:#7cb1e6;--blue-soft:#172538;--amber:#e3ab4f;--amber-soft:#2a2114;
+  --accent-fill:#2c68a6;--on-accent:#ffffff;--on-accent-soft:#d6e4f3;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 12px);-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:16px;line-height:1.5;
+}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px 70px}
+
+header.top{padding:40px 0 4px}
+h1{font-size:25px;font-weight:600;line-height:1.25;margin:0 0 10px}
+header.top p.lede{margin:0;max-width:62ch;color:var(--ink-soft);font-size:15.5px}
+.kicker{font-size:13px;color:var(--ink-faint);margin:0}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 8px}
+.theme{display:inline-flex;border:1px solid var(--rule);font-size:12.5px}
+.theme button{font-size:12.5px;padding:4px 10px;border:0;background:var(--surface);color:var(--ink-soft)}
+.theme button + button{border-left:1px solid var(--rule)}
+.theme button[aria-pressed="true"]{background:var(--accent-fill);color:var(--on-accent)}
+
+.identity{margin-top:22px;display:flex;flex-wrap:wrap;gap:16px}
+.identity label{display:flex;flex-direction:column;gap:4px;flex:1 1 190px;font-size:13px;color:var(--ink-soft)}
+.identity input{font:inherit;font-size:15px;color:var(--ink);background:var(--surface);border:1px solid var(--rule);padding:7px 9px}
+.identity input:focus{outline:none;border-color:var(--blue)}
+
+.howto{margin:26px 0 0;padding:16px 0;border-top:1px solid var(--rule-soft);border-bottom:1px solid var(--rule-soft)}
+.howto h2{font-size:15px;font-weight:600;margin:0 0 6px}
+.howto p{margin:0 0 10px;color:var(--ink-soft);font-size:14.5px;max-width:66ch}
+.howto p.key{color:var(--ink);border-left:3px solid var(--blue);background:var(--blue-soft);padding:10px 12px}
+.howto dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:14px}
+.howto dt{font-weight:600;white-space:nowrap}
+.howto dd{margin:0;color:var(--ink-soft)}
+
+section.block{margin-top:34px}
+.block-head{display:flex;align-items:baseline;gap:10px;padding-bottom:6px;border-bottom:2px solid var(--ink)}
+.block-head h2{font-size:18px;font-weight:600;margin:0;flex:1}
+.block-head span{font-size:13px;color:var(--ink-faint)}
+
+.item{padding:14px 0 13px;border-bottom:1px solid var(--rule-soft)}
+.item.missing{border-left:3px solid var(--blue);padding-left:12px}
+.item p.stmt{margin:0 0 10px;font-size:15px;max-width:66ch}
+.item p.stmt b{font-weight:600;color:var(--ink-faint);font-size:13px;margin-right:8px}
+.opts{display:grid;grid-template-columns:repeat(4,1fr) .7fr;gap:5px}
+.opts label{
+  display:flex;flex-direction:column;cursor:pointer;border:1px solid var(--rule);
+  padding:7px 7px 8px;font-size:13px;line-height:1.25;color:var(--ink);
+  background:var(--surface);
+}
+.opts label .rot{font-weight:600;font-size:13px}
+.opts label .ex{display:block;margin-top:3px;font-size:11.5px;color:var(--ink-faint);line-height:1.3}
+.opts label.dkopt{justify-content:center;text-align:center;color:var(--ink-soft)}
+.opts input{position:absolute;opacity:0;width:0;height:0}
+.opts label:hover{border-color:var(--blue)}
+.opts input:focus-visible + span{outline:2px solid var(--blue);outline-offset:3px}
+.opts label.on{background:var(--accent-fill);border-color:var(--accent-fill);color:var(--on-accent)}
+.opts label.on .ex{color:var(--on-accent-soft)}
+
+.actions{
+  position:sticky;bottom:0;margin-top:26px;background:var(--bg);
+  border-top:2px solid var(--ink);padding:12px 0;
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+}
+.progress{flex:1 1 160px;min-width:140px}
+.progress .track{height:3px;background:var(--rule-soft)}
+.progress .fill{height:100%;width:0;background:var(--blue);transition:width .2s}
+.progress small{display:block;margin-top:5px;font-size:13px;color:var(--ink-soft)}
+button{
+  font:inherit;font-size:15px;cursor:pointer;padding:9px 18px;
+  border:1px solid var(--accent-fill);background:var(--accent-fill);color:var(--on-accent);
+}
+button.ghost{background:var(--surface);color:var(--blue);border-color:var(--blue)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.warn{width:100%;margin:0;font-size:14px;color:var(--blue);font-weight:600}
+
+.check{width:100%;border-left:3px solid var(--amber);background:var(--amber-soft);padding:12px 14px;font-size:14.5px}
+.check b{color:var(--amber)}
+.check .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.check[hidden]{display:none}
+
+#report{margin-top:46px}
+#report[hidden]{display:none}
+.rep-head{border-top:3px solid var(--ink);padding-top:18px}
+.rep-head h2{font-size:21px;font-weight:600;margin:0 0 5px}
+.rep-meta{font-size:13px;color:var(--ink-faint);margin:0 0 26px}
+
+.rep-sec{margin-top:30px}
+.rep-sec > h3{font-size:16px;font-weight:600;margin:0 0 12px;padding-bottom:5px;border-bottom:1px solid var(--ink)}
+
+.prow{display:grid;grid-template-columns:132px 1fr 160px;gap:14px;align-items:center;padding:10px 0;border-bottom:1px solid var(--rule-soft)}
+.prow .dim{font-weight:600;font-size:15px}
+.prow .gauge{position:relative;height:16px;border:1px solid var(--rule);background:var(--surface)}
+/* barra desenhada com borda (e não fundo), pois navegadores omitem fundos ao imprimir */
+.prow .gauge i{position:absolute;top:0;left:0;height:0;display:block;border-top:14px solid var(--blue)}
+.prow .gauge u{position:absolute;top:0;bottom:0;width:1px;background:var(--rule)}
+.prow .lvl{text-align:right;font-size:13px;color:var(--ink-soft)}
+.prow .lvl b{display:block;color:var(--ink);font-size:14px;font-weight:600}
+.scalekey{margin-top:10px;font-size:12.5px;color:var(--ink-faint)}
+
+.reading{margin:0;padding:0;list-style:none}
+.reading li{padding:10px 0;border-bottom:1px solid var(--rule-soft);font-size:15px;max-width:68ch}
+.reading li b{font-weight:600}
+
+.prio{margin:0;padding:0;list-style:none;counter-reset:p}
+.prio li{counter-increment:p;position:relative;padding:11px 0 11px 34px;border-bottom:1px solid var(--rule-soft);font-size:15px}
+.prio li::before{
+  content:counter(p) ".";position:absolute;left:0;top:11px;
+  font-size:14px;font-weight:600;color:var(--blue);
+}
+.prio li b{font-weight:600}
+.tag{display:inline-block;margin-left:8px;padding:1px 7px;font-size:11.5px;font-weight:600;
+  color:var(--blue);border:1px solid var(--blue);vertical-align:1px}
+.tag.amb{color:var(--amber);border-color:var(--amber)}
+
+.note{border-left:3px solid var(--blue);background:var(--blue-soft);padding:12px 14px;font-size:14.5px}
+.note b{color:var(--blue)}
+.note.amb{border-left-color:var(--amber);background:var(--amber-soft)}
+.note.amb b{color:var(--amber)}
+.rule{margin-top:14px;font-size:13px;color:var(--ink-soft);border:1px solid var(--rule-soft);padding:10px 12px}
+.rule b{color:var(--ink)}
+
+.recdim{margin-bottom:20px}
+.recdim h4{font-size:15px;margin:0 0 2px;font-weight:600}
+.recdim .sub{font-size:13px;color:var(--ink-faint);margin:0 0 8px}
+.recdim ul{margin:0;padding:0;list-style:none}
+.recdim li{display:flex;gap:12px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--rule-soft);font-size:14.5px}
+.recdim li span.src{flex:0 0 96px;font-size:12px;font-weight:600;color:var(--ink-faint);padding-top:1px}
+.recdim li span.src.ext{color:var(--blue)}
+
+.fb{display:grid;gap:12px;font-size:14.5px}
+.fb fieldset{border:0;margin:0;padding:0}
+.fb legend{font-weight:600;margin-bottom:6px;padding:0}
+.fb .choices{display:flex;gap:6px;flex-wrap:wrap}
+.fb .choices label{border:1px solid var(--rule);background:var(--surface);padding:6px 12px;cursor:pointer;font-size:14px}
+.fb .choices label.on{background:var(--accent-fill);border-color:var(--accent-fill);color:var(--on-accent)}
+.fb .choices input{position:absolute;opacity:0;width:0;height:0}
+.fb textarea{font:inherit;font-size:14px;width:100%;min-height:60px;border:1px solid var(--rule);padding:7px 9px;background:var(--surface);color:var(--ink)}
+
+.closing{margin-top:28px;border-top:1px solid var(--rule-soft);padding-top:14px;font-size:14px;color:var(--ink-soft);max-width:68ch}
+.repactions{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+.hist{margin-top:20px;font-size:14px;color:var(--ink-soft);overflow-x:auto}
+.hist table{border-collapse:collapse;margin-top:6px;font-size:13.5px;width:100%}
+.hist th,.hist td{text-align:left;padding:5px 10px 5px 0;border-bottom:1px solid var(--rule-soft);white-space:nowrap}
+.hist th{color:var(--ink-faint);font-weight:600}
+
+footer.src{margin-top:50px;padding-top:16px;border-top:1px solid var(--rule-soft);font-size:12.5px;color:var(--ink-faint);max-width:72ch}
+footer.src p{margin:0 0 6px}
+footer.src details{margin-top:10px}
+footer.src summary{cursor:pointer;color:var(--ink-soft);font-weight:600}
+footer.src ol{margin:8px 0 0;padding-left:18px}
+
+@media (max-width:620px){
+  .opts{grid-template-columns:repeat(2,1fr)}
+  .opts label.dkopt{grid-column:1 / -1}
+  .prow{grid-template-columns:1fr;gap:5px}
+  .prow .lvl{text-align:left}
+  .recdim li{flex-direction:column;gap:1px}
+  .recdim li span.src{flex:none}
+}
+@media print{
+  :root[data-theme],:root:not([data-theme]){
+    --ink:#1b1b1b;--ink-soft:#555;--ink-faint:#777;
+    --bg:#ffffff;--surface:#ffffff;--rule:#ccc;--rule-soft:#e6e6e6;
+    --blue:#12508c;--blue-soft:#eef3f9;--amber:#8a5a00;--amber-soft:#fbf4e6;
+    --accent-fill:#12508c;--on-accent:#ffffff;--on-accent-soft:#dfe8f2;
+    color-scheme:light;
+  }
+  .theme{display:none!important}
+  .actions,.repactions,#form,.identity,.howto,.fbwrap,.check{display:none!important}
+  .wrap{max-width:none;padding:0}
+  .prow,.note,.tag,.rule{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .prow,.rep-sec > h3,.recdim li,.note{break-inside:avoid}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div class="topbar">
+    <p class="kicker">Instrumento de autodiagnóstico · versão 2.2</p>
+    <div class="theme" role="group" aria-label="Tema">
+      <button type="button" data-theme-opt="auto" aria-pressed="true">Automático</button>
+      <button type="button" data-theme-opt="light" aria-pressed="false">Claro</button>
+      <button type="button" data-theme-opt="dark" aria-pressed="false">Escuro</button>
+    </div>
+  </div>
+  <h1>Diagnóstico de maturidade de recursos técnicos para adoção de IA</h1>
+  <p class="lede">Vinte perguntas sobre o que já existe hoje na empresa. Ao final, você recebe um diagnóstico por dimensão e uma ordem de prioridade para decidir onde investir. Leva cerca de dez minutos e não exige conhecimento técnico.</p>
+
+  <div class="identity">
+    <label>Empresa
+      <input type="text" id="empresa" placeholder="Nome da empresa" autocomplete="organization">
+    </label>
+    <label>Quem está respondendo
+      <input type="text" id="respondente" placeholder="Nome e função">
+    </label>
+    <label>Data da aplicação
+      <input type="date" id="data">
+    </label>
+  </div>
+</header>
+
+<div class="howto">
+  <h2>Como responder</h2>
+  <p>Cada frase descreve uma prática que pode ou não existir na sua empresa. Escolha a opção que corresponde à situação real de hoje, não à situação desejada. Se não souber responder, marque “Não sei” — isso também é informação.</p>
+  <p class="key"><b>As opções não são notas.</b> Elas indicam se a prática existe e quão organizada ela é, e não se ela funciona bem. “Acompanhado” não significa “excelente”: significa que a prática está registrada por escrito <i>e</i> que alguém confere com regularidade se ela está sendo seguida. <b>Na dúvida entre duas opções, escolha a mais baixa.</b></p>
+  <dl>
+    <dt>Não existe</dt><dd>A empresa não tem essa prática.</dd>
+    <dt>Informal</dt><dd>Existe, mas depende da iniciativa de alguém e não está escrita em lugar nenhum.</dd>
+    <dt>Padronizado</dt><dd>Existe, está combinada e registrada por escrito, mas ninguém confere se é seguida.</dd>
+    <dt>Acompanhado</dt><dd>Existe, está registrada e alguém confere com regularidade se é seguida.</dd>
+  </dl>
+  <p style="margin:10px 0 0">Abaixo de cada opção há um exemplo curto do que ela significa naquela pergunta.</p>
+</div>
+
+<form id="form"></form>
+
+<div class="actions">
+  <div class="progress">
+    <div class="track"><div class="fill" id="fill"></div></div>
+    <small id="count">0 de 20 respondidas</small>
+  </div>
+  <button type="button" id="gerar">Gerar diagnóstico</button>
+  <button type="button" class="ghost" id="limpar">Limpar respostas</button>
+  <p class="warn" id="warn" hidden></p>
+  <div class="check" id="check" hidden>
+    <p style="margin:0" id="checktxt"></p>
+    <div class="row">
+      <button type="button" class="ghost" id="revisar">Revisar respostas</button>
+      <button type="button" id="confirmar">Manter respostas e gerar</button>
+    </div>
+  </div>
+</div>
+
+<section id="report" hidden aria-live="polite"></section>
+
+<footer class="src">
+  <p>Artefato desenvolvido na disciplina de Pesquisa Aplicada, Bacharelado em Ciência da Computação — Grupo 5. Davi Natume, Eduardo Teodoro, Lucas Maciel e Pedro Favero.</p>
+  <p>Dimensões derivadas de Mikalef e Gupta (2021) e Weber et al. (2023); escala de estágios de Hansen et al. (2024) e Uren e Edwards (2023); recomendações diferenciadas por estágio conforme Solaimani e Swaak (2023); separação entre desenvolvimento interno e aquisição externa conforme Jacobides, Brusoni e Candelon (2021) e Robertson et al. (2025).</p>
+  <details>
+    <summary>O que mudou da versão 1 para a 2</summary>
+    <ol>
+      <li>Instrução de resposta reescrita: a escala mede existência e formalização, não qualidade.</li>
+      <li>Números das opções (0 a 3) ocultados, para não serem confundidos com os níveis (1 a 4) nem com notas.</li>
+      <li>Exemplo curto de evidência sob cada opção, em cada pergunta.</li>
+      <li>Cinco enunciados reformulados (I1, I3, D3, F5, C1) para descrever uma única prática observável.</li>
+      <li>Aviso de consistência antes de gerar o diagnóstico, quando as respostas se concentram nas opções mais altas.</li>
+      <li>Tempo estimado ajustado de vinte para cerca de dez minutos.</li>
+      <li>Sinalização de dimensões limite e de diferenças de prioridade equivalentes a uma única resposta.</li>
+      <li>Regra de priorização e critério de desempate exibidos no relatório.</li>
+      <li>Perguntas de utilidade percebida e de decisão de alocação ao final do relatório; exportação das respostas.</li>
+    </ol>
+    <p style="margin-top:8px">Versão 2.1: ajustes de nomenclatura. Versão 2.2: tema escuro, escolhido automaticamente conforme o sistema ou manualmente; o relatório impresso ou salvo em PDF sai sempre no tema claro.</p>
+    <p style="margin-top:8px">A lógica de cálculo (médias, faixas de nível, priorização e desempate) é idêntica à da versão 1.0.</p>
+  </details>
+</footer>
+
+</div>
+
+<script>
+const VERSAO = '2.2';
+
+/* ============ DADOS DO INSTRUMENTO ============ */
+const DIMS = [
+  { id:'infra', nome:'Infraestrutura', desc:'Equipamentos, nuvem, rede, backup e controle de acesso.' },
+  { id:'dados', nome:'Dados', desc:'Registro, centralização, padronização, histórico e responsabilidade.' },
+  { id:'ferr',  nome:'Ferramentas', desc:'Sistemas em uso, integração, exportação e automação.' },
+  { id:'comp',  nome:'Competências', desc:'Orientação, responsável, experiência, tempo e apoio externo.' }
+];
+
+/* ex: exemplos de evidência para [Não existe, Informal, Padronizado, Acompanhado] */
+const ITENS = [
+  {d:'infra',c:'I1',t:'Os equipamentos são revistos e substituídos quando deixam de dar conta das tarefas do dia a dia.',
+   ex:['Só se troca quando quebra','Alguém pede troca quando trava','Há lista dos equipamentos e critério de troca','A lista é revista periodicamente e orienta as compras']},
+  {d:'infra',c:'I2',t:'A empresa usa serviços em nuvem para guardar arquivos ou rodar sistemas.',
+   ex:['Arquivos só nos computadores ou pen drives','Alguns usam nuvem por conta própria','Conta da empresa na nuvem, com pastas definidas','Uso e espaço da nuvem conferidos com regularidade']},
+  {d:'infra',c:'I3',t:'Existe uma alternativa prevista para quando a conexão de internet da empresa cai.',
+   ex:['Se a internet cai, o trabalho para','Alguém compartilha o celular quando precisa','Segundo link ou roteador reserva definido','A alternativa é testada de tempos em tempos']},
+  {d:'infra',c:'I4',t:'Existe rotina de backup dos arquivos e dos sistemas da empresa.',
+   ex:['Não se faz cópia dos arquivos','Alguém copia de vez em quando','Cópia automática ou em dia fixo','Alguém confere a cópia e testa recuperar']},
+  {d:'infra',c:'I5',t:'Há controle de quem acessa cada sistema, com conta e permissão por pessoa.',
+   ex:['Todos usam a mesma senha','Contas individuais só em alguns sistemas','Cada pessoa tem conta e permissão definida','Permissões revistas; contas de quem saiu removidas']},
+
+  {d:'dados',c:'D1',t:'As operações do dia a dia ficam registradas digitalmente, e não apenas no papel ou na memória.',
+   ex:['Controle no papel ou de cabeça','Parte registrada em planilhas pessoais','Registro digital obrigatório nas operações principais','Alguém confere se os registros estão completos']},
+  {d:'dados',c:'D2',t:'Os dados ficam em um lugar único, em vez de espalhados por arquivos e aplicativos diferentes.',
+   ex:['Cada um guarda no seu computador','Há pasta comum, mas nem todos usam','Lugar único definido para os dados','Lugar único conferido, sem cópias paralelas']},
+  {d:'dados',c:'D3',t:'Existe um padrão de preenchimento para o cadastro de clientes, produtos ou serviços.',
+   ex:['Cada um cadastra do seu jeito','Há um jeito costumeiro, não escrito','Regra de cadastro escrita','Cadastro conferido e duplicados corrigidos']},
+  {d:'dados',c:'D4',t:'O histórico de períodos anteriores está preservado e permite comparar meses ou anos.',
+   ex:['Dados antigos se perdem','Algum histórico existe, espalhado','Histórico guardado de forma organizada','Histórico usado para comparar períodos']},
+  {d:'dados',c:'D5',t:'Alguém é responsável por manter e corrigir os dados da empresa.',
+   ex:['Ninguém cuida dos dados','Quem percebe o erro corrige','Pessoa designada para os dados','A pessoa designada confere com regularidade']},
+
+  {d:'ferr',c:'F1',t:'A empresa usa um sistema de gestão que apoia a operação principal do negócio.',
+   ex:['Gestão em papel ou planilhas soltas','Sistema usado por parte da equipe','Sistema adotado por todos na operação principal','Uso do sistema acompanhado e ajustado']},
+  {d:'ferr',c:'F2',t:'Os sistemas usados conversam entre si, sem precisar digitar a mesma informação duas vezes.',
+   ex:['Mesma informação digitada várias vezes','Transferência manual por planilha','Sistemas principais integrados','Integrações conferidas quando falham ou mudam']},
+  {d:'ferr',c:'F3',t:'É possível exportar os dados dos sistemas em planilha ou arquivo quando necessário.',
+   ex:['Não se consegue tirar os dados','Só uma pessoa sabe exportar','Forma de exportar conhecida e escrita','Exportações feitas em rotina definida']},
+  {d:'ferr',c:'F4',t:'A empresa já usa recursos de automação ou de inteligência artificial das ferramentas que possui.',
+   ex:['Nenhuma automação em uso','Alguém usa por conta própria','Automação adotada em processo definido','Resultado da automação é medido']},
+  {d:'ferr',c:'F5',t:'Os processos que se repetem estão descritos por escrito, passo a passo.',
+   ex:['Ninguém escreveu como se faz','Anotações pessoais de alguns','Passo a passo escrito dos principais','Passo a passo revisto quando o processo muda']},
+
+  {d:'comp',c:'C1',t:'A equipe recebe orientação sobre as ferramentas digitais que usa no trabalho.',
+   ex:['Cada um aprende sozinho','Um colega ensina quando perguntam','Orientação definida, inclusive para quem entra','Necessidades de orientação revistas periodicamente']},
+  {d:'comp',c:'C2',t:'Existe alguém responsável por tecnologia na empresa, mesmo que acumule outras funções.',
+   ex:['Ninguém responde por tecnologia','Quem entende mais acaba resolvendo','Pessoa nomeada como responsável','Responsável com atribuições e agenda definidas']},
+  {d:'comp',c:'C3',t:'A empresa já conduziu antes algum projeto de tecnologia do início ao fim.',
+   ex:['Nenhum projeto concluído','Concluído sem planejamento formal','Projeto com etapas e responsáveis definidos','Resultado do projeto avaliado ao final']},
+  {d:'comp',c:'C4',t:'Há tempo reservado para a equipe aprender a usar novas ferramentas.',
+   ex:['Aprender fica para quando sobra tempo','Aprende-se quando surge a necessidade','Tempo de aprendizado previsto na agenda','Tempo previsto e uso acompanhado']},
+  {d:'comp',c:'C5',t:'A empresa conta com apoio externo recorrente em tecnologia, como parceiro ou fornecedor.',
+   ex:['Sem apoio externo','Chama-se alguém quando dá problema','Contrato ou parceiro definido','Atendimento do parceiro é avaliado']}
+];
+
+/* v: valor usado no cálculo (não exibido ao respondente) */
+const OPCOES = [
+  {v:0,rot:'Não existe'},
+  {v:1,rot:'Informal'},
+  {v:2,rot:'Padronizado'},
+  {v:3,rot:'Acompanhado'},
+  {v:0,rot:'Não sei',dk:true}
+];
+
+const NIVEIS = [
+  {n:1,nome:'Inicial',desc:'o recurso não existe ou não é conhecido; qualquer iniciativa de IA dependeria de construí-lo do zero'},
+  {n:2,nome:'Emergente',desc:'o recurso existe de forma informal e dependente de pessoas; sustenta testes pontuais, não uma iniciativa continuada'},
+  {n:3,nome:'Estruturado',desc:'o recurso é padronizado e documentado; sustenta iniciativas de IA de escopo delimitado'},
+  {n:4,nome:'Avançado',desc:'o recurso é padronizado e acompanhado; não representa restrição para adotar IA'}
+];
+
+const CORTES = [0.75, 1.50, 2.25];
+const PASSO = 0.20;               /* efeito de uma resposta (1 ponto em 5 itens) sobre a média */
+const LIMIAR_CONSISTENCIA = 2.50; /* média geral a partir da qual o aviso é exibido */
+
+/* recomendações: [dimensão][nível] → 3 ações, cada uma com origem */
+const REC = {
+  infra:{
+    1:[['int','Levantar o que a empresa tem hoje: quantos computadores, onde ficam os arquivos e quem tem acesso a quê.'],
+       ['int','Criar uma rotina simples de backup automático dos arquivos críticos em serviço de nuvem gratuito ou de baixo custo.'],
+       ['ext','Contratar um serviço básico de nuvem em vez de investir em servidor próprio, evitando custo fixo desnecessário.']],
+    2:[['int','Escrever a rotina de backup e definir quem confere se ela funcionou, transformando prática informal em procedimento.'],
+       ['int','Criar contas individuais nos sistemas, eliminando senhas compartilhadas entre a equipe.'],
+       ['ext','Contratar link de internet redundante ou alternativa móvel para a operação não parar em caso de queda.']],
+    3:[['int','Testar a restauração do backup periodicamente; backup que nunca foi restaurado não é backup verificado.'],
+       ['int','Revisar as permissões de acesso a cada semestre, removendo contas de quem saiu da empresa.'],
+       ['ext','Avaliar se a capacidade atual de processamento comporta as ferramentas de IA pretendidas antes de contratá-las.']],
+    4:[['int','Manter o monitoramento existente e usar a infraestrutura como base para os pilotos de IA.'],
+       ['int','Documentar a capacidade disponível para dimensionar corretamente o próximo investimento.'],
+       ['ext','Negociar com o fornecedor de nuvem o dimensionamento para cargas de IA, evitando surpresa de custo.']]
+  },
+  dados:{
+    1:[['int','Escolher uma única operação, como vendas ou atendimentos, e passar a registrá-la digitalmente todos os dias.'],
+       ['int','Definir desde já um formato único de cadastro de clientes, antes que o volume de registros cresça.'],
+       ['ext','Adotar uma planilha ou ferramenta gratuita de registro; nesta etapa, a prioridade é passar a registrar, não a sofisticação.']],
+    2:[['int','Reunir em um só lugar os dados que hoje estão espalhados entre planilhas, aplicativos e mensagens.'],
+       ['int','Definir quem é responsável por manter e corrigir os dados, nomeando uma pessoa específica.'],
+       ['ext','Contratar apoio pontual para consolidar e limpar a base atual, tarefa que costuma travar quando feita internamente.']],
+    3:[['int','Padronizar os cadastros e eliminar duplicidades, estabelecendo regra única de preenchimento.'],
+       ['int','Garantir que o histórico dos períodos anteriores esteja preservado e acessível para comparação.'],
+       ['ext','Avaliar com o fornecedor do sistema como extrair os dados em formato utilizável por ferramentas de IA.']],
+    4:[['int','Usar a base existente para definir qual pergunta de negócio a IA deve responder primeiro.'],
+       ['int','Manter a rotina de conferência de qualidade dos dados, que é o insumo direto de qualquer modelo.'],
+       ['ext','Verificar as condições contratuais de uso e de saída dos dados junto ao fornecedor antes de integrá-los a uma ferramenta de IA.']]
+  },
+  ferr:{
+    1:[['int','Mapear em uma folha as tarefas repetitivas da semana; elas indicam onde uma ferramenta trará ganho imediato.'],
+       ['ext','Adotar um sistema de gestão adequado ao porte antes de pensar em IA; sem sistema, não há dado para automatizar.'],
+       ['ext','Priorizar ferramentas que permitam exportar dados, evitando dependência de fornecedor desde o início.']],
+    2:[['int','Escrever o passo a passo dos dois processos mais repetitivos, requisito prático para automatizá-los depois.'],
+       ['int','Testar os recursos de automação já incluídos nas ferramentas que a empresa paga hoje, antes de contratar novidades.'],
+       ['ext','Verificar quais dos sistemas atuais permitem integração entre si, eliminando digitação duplicada.']],
+    3:[['int','Escolher um processo documentado e executar um piloto controlado de automação, com resultado mensurável.'],
+       ['int','Registrar o tempo gasto no processo antes do piloto, para conseguir comparar depois.'],
+       ['ext','Avaliar ferramentas de IA que se integrem ao sistema já em uso, em vez de adicionar mais uma ferramenta isolada.']],
+    4:[['int','Expandir a automação para o segundo e o terceiro processos, seguindo o piloto bem-sucedido.'],
+       ['int','Documentar o que funcionou no piloto para reaproveitar o método nas próximas iniciativas.'],
+       ['ext','Negociar escalonamento de licenças conforme o uso cresce, evitando contratos superdimensionados.']]
+  },
+  comp:{
+    1:[['int','Nomear uma pessoa como ponto focal de tecnologia, ainda que acumule outras funções; sem responsável, a iniciativa não avança.'],
+       ['int','Reservar uma hora semanal fixa para aprendizado de ferramentas digitais.'],
+       ['ext','Buscar capacitação gratuita em entidades de apoio a pequenas empresas antes de contratar treinamento pago.']],
+    2:[['int','Formalizar o tempo de aprendizado na agenda da equipe, em vez de deixá-lo para quando sobrar tempo.'],
+       ['int','Registrar o que a equipe aprendeu, para que o conhecimento não saia junto com a pessoa.'],
+       ['ext','Estabelecer um parceiro externo de referência para dúvidas recorrentes, reduzindo a dependência de uma única pessoa interna.']],
+    3:[['int','Envolver a equipe operacional no desenho do piloto de IA; a resistência costuma vir de quem não participou da decisão.'],
+       ['int','Definir com o ponto focal de tecnologia quais decisões ele pode tomar sozinho.'],
+       ['ext','Contratar capacitação específica na ferramenta escolhida, e não treinamento genérico sobre IA.']],
+    4:[['int','Usar a experiência acumulada para conduzir o piloto internamente, reduzindo custo de consultoria.'],
+       ['int','Formar um segundo responsável, evitando que a iniciativa dependa de uma única pessoa.'],
+       ['ext','Manter o parceiro externo em papel de apoio, não de condução, preservando o conhecimento dentro da empresa.']]
+  }
+};
+
+const PRECEDENCIA = ['dados','infra','ferr','comp'];
+
+/* ============ ESTADO ============ */
+const respostas = {};       // codigo -> {v, dk, oi}
+let inicio = null;
+let avisoExibido = false;
+let ultimo = null;          // último diagnóstico gerado
+
+/* ============ MONTAGEM DO FORMULÁRIO ============ */
+const form = document.getElementById('form');
+DIMS.forEach(dim => {
+  const sec = document.createElement('section');
+  sec.className = 'block';
+  const itensDim = ITENS.filter(i => i.d === dim.id);
+  sec.innerHTML = `<div class="block-head"><h2>${dim.nome}</h2><span>${itensDim.length} perguntas</span></div>`;
+  itensDim.forEach(it => {
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.id = 'item-' + it.c;
+    let opts = '';
+    OPCOES.forEach((o, oi) => {
+      const ex = o.dk ? '' : `<span class="ex">${it.ex[oi]}</span>`;
+      opts += `<label data-oi="${oi}" class="${o.dk ? 'dkopt' : ''}">
+        <input type="radio" name="${it.c}" value="${oi}">
+        <span class="rot">${o.rot}</span>${ex}
+      </label>`;
+    });
+    div.innerHTML = `<p class="stmt"><b>${it.c}</b>${it.t}</p><div class="opts">${opts}</div>`;
+    sec.appendChild(div);
+  });
+  form.appendChild(sec);
+});
+
+form.addEventListener('change', e => {
+  if (e.target.type !== 'radio') return;
+  if (!inicio) inicio = Date.now();
+  const cod = e.target.name, oi = +e.target.value, o = OPCOES[oi];
+  respostas[cod] = { v: o.v, dk: !!o.dk, oi: oi };
+  const item = document.getElementById('item-' + cod);
+  item.classList.remove('missing');
+  item.querySelectorAll('.opts label').forEach(l => l.classList.toggle('on', +l.dataset.oi === oi));
+  document.getElementById('check').hidden = true;
+  atualizarProgresso();
+});
+
+function atualizarProgresso(){
+  const n = Object.keys(respostas).length;
+  document.getElementById('fill').style.width = (n / ITENS.length * 100) + '%';
+  document.getElementById('count').textContent = `${n} de ${ITENS.length} respondidas`;
+}
+
+/* ============ CÁLCULO (inalterado em relação à versão 1.0) ============ */
+function num(x){ return x.toFixed(2).replace('.', ','); }
+function arred(x){ return Math.round(x * 100) / 100; }
+
+function faixa(m){
+  if (m < 0.75) return 1;
+  if (m < 1.50) return 2;
+  if (m < 2.25) return 3;
+  return 4;
+}
+
+function calcular(){
+  const res = {};
+  DIMS.forEach(d => {
+    const itens = ITENS.filter(i => i.d === d.id);
+    const soma = itens.reduce((s,i) => s + respostas[i.c].v, 0);
+    const media = arred(soma / itens.length);
+    res[d.id] = {
+      dim: d, soma: soma, media: media, nivel: faixa(media),
+      desconhecidos: itens.filter(i => respostas[i.c].dk).map(i => i.c),
+      limite: limitrofe(media)
+    };
+  });
+  return res;
+}
+
+function priorizar(res){
+  return Object.values(res).slice().sort((a,b) => {
+    if (a.media !== b.media) return a.media - b.media;
+    return PRECEDENCIA.indexOf(a.dim.id) - PRECEDENCIA.indexOf(b.dim.id);
+  });
+}
+
+/* ============ NOVOS SINAIS DA VERSÃO 2.0 ============ */
+/* Limítrofe: a média está a menos de uma resposta (0,20) de um corte entre níveis */
+function limitrofe(m){
+  for (const c of CORTES){
+    const dist = arred(Math.abs(m - c));
+    if (dist < PASSO){
+      const nAbaixo = faixa(c - 0.01), nAcima = faixa(c);
+      return { corte: c, dist: dist, entre: [nAbaixo, nAcima] };
+    }
+  }
+  return null;
+}
+
+/* Pares consecutivos na ordem de prioridade cuja diferença equivale a no máximo uma resposta */
+function diferencasPequenas(ordem){
+  const pares = [];
+  for (let i = 0; i < ordem.length - 1; i++){
+    const dif = arred(ordem[i+1].media - ordem[i].media);
+    if (dif <= PASSO) pares.push([ordem[i], ordem[i+1], dif]);
+  }
+  return pares;
+}
+
+/* Consistência: respostas concentradas nas opções mais altas ou todas iguais */
+function consistencia(){
+  const vals = ITENS.map(i => respostas[i.c]);
+  const media = arred(vals.reduce((s,r) => s + r.v, 0) / vals.length);
+  const nAcomp = vals.filter(r => r.oi === 3).length;
+  const todasIguais = vals.every(r => r.oi === vals[0].oi);
+  return { media, nAcomp, todasIguais, dispara: media >= LIMIAR_CONSISTENCIA || todasIguais };
+}
+
+/* ============ GERAÇÃO ============ */
+document.getElementById('gerar').addEventListener('click', () => {
+  const faltando = ITENS.filter(i => !respostas[i.c]);
+  const warn = document.getElementById('warn');
+  document.querySelectorAll('.item').forEach(el => el.classList.remove('missing'));
+  if (faltando.length){
+    faltando.forEach(i => document.getElementById('item-' + i.c).classList.add('missing'));
+    warn.hidden = false;
+    warn.textContent = `Faltam ${faltando.length} resposta(s): ${faltando.map(i=>i.c).join(', ')}. O diagnóstico não é gerado com preenchimento parcial.`;
+    document.getElementById('item-' + faltando[0].c).scrollIntoView({behavior:'smooth', block:'center'});
+    return;
+  }
+  warn.hidden = true;
+  const cons = consistencia();
+  if (cons.dispara){
+    avisoExibido = true;
+    const motivo = cons.todasIguais
+      ? 'Todas as vinte respostas estão na mesma opção.'
+      : `${cons.nAcomp} das 20 respostas estão em “Acompanhado”, e a média geral das respostas é ${num(cons.media)} de 3,00.`;
+    document.getElementById('checktxt').innerHTML = `<b>Confira antes de gerar.</b> ${motivo} Isso é possível, mas vale revisar: para cada pergunta marcada como “Acompanhado”, existe registro escrito <i>e</i> alguém que confere com regularidade? Se não, a opção correta é mais baixa.`;
+    document.getElementById('check').hidden = false;
+    document.getElementById('check').scrollIntoView({behavior:'smooth', block:'center'});
+    return;
+  }
+  renderizar(calcular(), cons);
+});
+
+document.getElementById('revisar').addEventListener('click', () => {
+  document.getElementById('check').hidden = true;
+  document.querySelector('.block').scrollIntoView({behavior:'smooth', block:'start'});
+});
+document.getElementById('confirmar').addEventListener('click', () => {
+  document.getElementById('check').hidden = true;
+  renderizar(calcular(), consistencia());
+});
+
+/* ============ RELATÓRIO ============ */
+function renderizar(res, cons){
+  const ordem = priorizar(res);
+  const empresa = document.getElementById('empresa').value.trim() || 'Empresa não identificada';
+  const resp = document.getElementById('respondente').value.trim();
+  const dataStr = document.getElementById('data').value || new Date().toISOString().slice(0,10);
+  const [yy,mm,dd] = dataStr.split('-');
+  const minutos = inicio ? Math.max(1, Math.round((Date.now() - inicio)/60000)) : null;
+
+  const dks = [].concat(...Object.values(res).map(r => r.desconhecidos));
+  const bloqueantes = ordem.filter(r => r.nivel === 1);
+  const limitrofes = DIMS.map(d => res[d.id]).filter(r => r.limite);
+  const pequenas = diferencasPequenas(ordem);
+
+  ultimo = { res, ordem, empresa, resp, dataStr, minutos, aviso: avisoExibido, consMedia: cons.media };
+
+  let h = `<div class="rep-head">
+    <h2>Diagnóstico de maturidade de recursos técnicos</h2>
+    <p class="rep-meta">${empresa}${resp ? ' · respondido por ' + resp : ''} · aplicação de ${dd}/${mm}/${yy}${minutos ? ' · preenchimento em aproximadamente ' + minutos + ' minuto(s)' : ''} · versão ${VERSAO}${avisoExibido ? ' · aviso de consistência exibido' : ''}</p>
+  </div>`;
+
+  /* 1. perfil */
+  h += `<div class="rep-sec"><h3>Perfil de maturidade</h3><div class="profile">`;
+  DIMS.forEach(d => {
+    const r = res[d.id];
+    const pct = (r.media / 3 * 100).toFixed(1);
+    h += `<div class="prow" data-dim="${d.id}">
+      <div class="dim">${d.nome}</div>
+      <div class="gauge">
+        <i style="width:${pct}%"></i>
+        <u style="left:25%"></u><u style="left:50%"></u><u style="left:75%"></u>
+      </div>
+      <div class="lvl"><b>Nível ${r.nivel} · ${NIVEIS[r.nivel-1].nome}</b>${num(r.media)} de 3,00${r.limite ? '<span class="tag amb">limite</span>' : ''}</div>
+    </div>`;
+  });
+  h += `</div><p class="scalekey">Escala de 0,00 a 3,00 por dimensão. Nível 1 Inicial até 0,74 · Nível 2 Emergente de 0,75 a 1,49 · Nível 3 Estruturado de 1,50 a 2,24 · Nível 4 Avançado a partir de 2,25. Uma resposta diferente em uma pergunta altera a média da dimensão em 0,20.</p></div>`;
+
+  /* 2. leitura */
+  h += `<div class="rep-sec"><h3>Leitura do perfil</h3><ul class="reading">`;
+  DIMS.forEach(d => {
+    const r = res[d.id];
+    h += `<li><b>${d.nome} — Nível ${r.nivel}, ${NIVEIS[r.nivel-1].nome}:</b> ${NIVEIS[r.nivel-1].desc}.</li>`;
+  });
+  h += `</ul>`;
+  if (limitrofes.length){
+    const txt = limitrofes.map(r => {
+      const [a,b] = r.limite.entre;
+      return `<b>${r.dim.nome}</b> (${num(r.media)}) está a ${num(r.limite.dist)} do limite entre ${NIVEIS[a-1].nome} e ${NIVEIS[b-1].nome}`;
+    }).join('; ');
+    h += `<div class="note amb" style="margin-top:16px" id="nota-limitrofe"><b>Nível limite.</b> ${txt}. Nesses casos, uma única resposta diferente mudaria o nível e, com ele, as recomendações. Antes de decidir, confira as perguntas dessa${limitrofes.length > 1 ? 's' : ''} dimens${limitrofes.length > 1 ? 'ões' : 'ão'} e considere também as recomendações do nível vizinho.</div>`;
+  }
+  if (dks.length){
+    h += `<div class="note" style="margin-top:16px"><b>Lacuna de visibilidade.</b> ${dks.length} pergunta(s) foram respondidas como “não sei” (${dks.join(', ')}). Elas entraram no cálculo como ausência do recurso, porque o que o gestor não conhece não pode ser planejado. Antes de investir, verifique esses pontos: a situação real pode ser melhor do que o diagnóstico indica.</div>`;
+  }
+  h += `</div>`;
+
+  /* 3. prioridades */
+  h += `<div class="rep-sec"><h3>Prioridades</h3><ol class="prio">`;
+  ordem.forEach(r => {
+    h += `<li><b>${r.dim.nome}</b> — Nível ${r.nivel}, ${num(r.media)} de 3,00${r.nivel === 1 ? '<span class="tag">restrição bloqueante</span>' : ''}<br><span style="color:var(--ink-soft);font-size:14px">${r.dim.desc}</span></li>`;
+  });
+  h += `</ol>`;
+  if (bloqueantes.length){
+    h += `<div class="note" style="margin-top:16px"><b>Atenção.</b> ${bloqueantes.length === 1 ? 'A dimensão' : 'As dimensões'} ${bloqueantes.map(b=>b.dim.nome).join(' e ')} ${bloqueantes.length === 1 ? 'está' : 'estão'} no Nível 1. Trate esse ponto antes de contratar qualquer ferramenta de IA: sem ele, a ferramenta não terá sobre o que operar, independentemente do estado das demais dimensões.</div>`;
+  }
+  if (pequenas.length){
+    const txt = pequenas.map(([a,b,dif]) => dif === 0
+      ? `${a.dim.nome} e ${b.dim.nome} têm a mesma média (ordem definida pelo critério de desempate)`
+      : `${a.dim.nome} e ${b.dim.nome} diferem ${num(dif)}`).join('; ');
+    h += `<div class="note amb" style="margin-top:16px" id="nota-ordem"><b>Ordem pouco definida.</b> ${txt}. Uma diferença de até 0,20 equivale a uma única resposta; trate essas dimensões como de prioridade semelhante e use o conhecimento do negócio para escolher entre elas.</div>`;
+  }
+  h += `<div class="rule" id="regra"><b>Como a ordem é definida.</b> A dimensão de menor média recebe a primeira prioridade. Em caso de empate, a precedência é Dados, Infraestrutura, Ferramentas e Competências, porque a qualidade dos dados condiciona qualquer uso de IA. Dimensões no Nível 1 são marcadas como restrição bloqueante, a tratar antes de qualquer investimento em ferramentas.</div>`;
+  h += `</div>`;
+
+  /* 4. recomendações */
+  h += `<div class="rep-sec"><h3>Recomendações</h3>`;
+  ordem.forEach((r, i) => {
+    let sub = `Ações correspondentes ao Nível ${r.nivel}, ${NIVEIS[r.nivel-1].nome}.`;
+    if (r.limite){
+      const viz = r.limite.entre.find(n => n !== r.nivel);
+      sub += ` Nível limite: veja também, abaixo, as ações do Nível ${viz}, ${NIVEIS[viz-1].nome}.`;
+    }
+    h += `<div class="recdim"><h4>${i+1}. ${r.dim.nome}</h4><p class="sub">${sub}</p><ul>`;
+    REC[r.dim.id][r.nivel].forEach(([src, txt]) => {
+      h += `<li><span class="src ${src === 'ext' ? 'ext' : ''}">${src === 'ext' ? 'Contratar' : 'Fazer internamente'}</span><span>${txt}</span></li>`;
+    });
+    h += `</ul>`;
+    if (r.limite){
+      const viz = r.limite.entre.find(n => n !== r.nivel);
+      h += `<p class="sub" style="margin-top:10px">Ações do Nível ${viz}, ${NIVEIS[viz-1].nome} (nível vizinho):</p><ul>`;
+      REC[r.dim.id][viz].forEach(([src, txt]) => {
+        h += `<li><span class="src ${src === 'ext' ? 'ext' : ''}">${src === 'ext' ? 'Contratar' : 'Fazer internamente'}</span><span>${txt}</span></li>`;
+      });
+      h += `</ul>`;
+    }
+    h += `</div>`;
+  });
+  h += `</div>`;
+
+  /* 5. retorno do respondente */
+  h += `<div class="rep-sec fbwrap"><h3>Sua avaliação do diagnóstico</h3>
+  <div class="fb">
+    <fieldset><legend>As prioridades e as recomendações ajudam a decidir onde investir?</legend>
+      <div class="choices" data-name="util">
+        ${['Sim','Em parte','Não'].map(o => `<label><input type="radio" name="util" value="${o}">${o}</label>`).join('')}
+      </div></fieldset>
+    <fieldset><legend>Qual dimensão você pretende tratar primeiro?</legend>
+      <div class="choices" data-name="decisao">
+        ${DIMS.map(d => `<label><input type="radio" name="decisao" value="${d.id}">${d.nome}</label>`).join('')}
+        <label><input type="radio" name="decisao" value="nenhuma">Nenhuma por enquanto</label>
+      </div></fieldset>
+    <label style="display:grid;gap:4px"><span style="font-weight:600">Alguma pergunta ficou difícil de responder? Qual e por quê? (opcional)</span>
+      <textarea id="dificuldade" placeholder="Ex.: D2 — não sei se a pasta compartilhada conta como lugar único"></textarea></label>
+  </div></div>`;
+
+  /* 6. fechamento */
+  h += `<p class="closing">Este diagnóstico é o insumo da etapa de alocação de recursos da frente de organização da IA: indica onde investir primeiro e o que tende a ser mais viável contratar. Ele não substitui o plano de alocação, nem recomenda fornecedores ou estima custos. O resultado baseia-se no que foi declarado nas respostas, sem verificação técnica independente.</p>`;
+
+  h += `<div class="repactions">
+    <button type="button" id="imprimir">Salvar em PDF ou imprimir</button>
+    <button type="button" class="ghost" id="guardar">Guardar esta aplicação</button>
+    <button type="button" class="ghost" id="exportar">Exportar respostas (CSV)</button>
+  </div><div class="hist" id="hist"></div>`;
+
+  const rep = document.getElementById('report');
+  rep.innerHTML = h;
+  rep.hidden = false;
+  rep.scrollIntoView({behavior:'smooth', block:'start'});
+
+  rep.querySelectorAll('.choices').forEach(g => g.addEventListener('change', e => {
+    g.querySelectorAll('label').forEach(l => l.classList.toggle('on', l.contains(e.target) && e.target.checked));
+  }));
+  document.getElementById('imprimir').onclick = () => window.print();
+  document.getElementById('guardar').onclick = guardar;
+  document.getElementById('exportar').onclick = exportar;
+  mostrarHistorico();
+}
+
+function retorno(){
+  const sel = n => { const el = document.querySelector(`#report input[name="${n}"]:checked`); return el ? el.value : ''; };
+  const t = document.getElementById('dificuldade');
+  return { util: sel('util'), decisao: sel('decisao'), dificuldade: t ? t.value.trim() : '' };
+}
+
+/* ============ HISTÓRICO LOCAL (comparação entre aplicações) ============ */
+function guardar(){
+  if (!ultimo) return;
+  const { res, ordem, empresa, dataStr } = ultimo;
+  try{
+    const reg = JSON.parse(localStorage.getItem('idmrt') || '[]');
+    reg.push({
+      versao: VERSAO, empresa, data: dataStr,
+      infra:res.infra.media, dados:res.dados.media, ferr:res.ferr.media, comp:res.comp.media,
+      niveis: DIMS.map(d => res[d.id].nivel).join(''),
+      prioridade: ordem[0].dim.id,
+      respostas: ITENS.map(i => respostas[i.c].dk ? 'x' : respostas[i.c].v).join(''),
+      ...retorno()
+    });
+    localStorage.setItem('idmrt', JSON.stringify(reg.slice(-12)));
+    mostrarHistorico();
+  }catch(e){
+    const el = document.getElementById('hist');
+    if (el) el.textContent = 'Não foi possível guardar a aplicação neste navegador. O relatório acima continua disponível para impressão e exportação.';
+  }
+}
+
+function mostrarHistorico(){
+  const el = document.getElementById('hist');
+  if (!el) return;
+  let reg = [];
+  try{ reg = JSON.parse(localStorage.getItem('idmrt') || '[]'); }catch(e){ reg = []; }
+  if (!reg.length){ el.innerHTML = ''; return; }
+  const nomeDim = id => (DIMS.find(d => d.id === id) || {nome:'—'}).nome;
+  let t = `<p style="margin:0 0 4px">Aplicações guardadas neste navegador, para acompanhar a evolução:</p>
+  <table><tr><th>Data</th><th>Empresa</th><th>Versão</th><th>Infra.</th><th>Dados</th><th>Ferr.</th><th>Comp.</th><th>1ª prioridade</th></tr>`;
+  reg.slice().reverse().forEach(r => {
+    const [y,m,d] = r.data.split('-');
+    const nv = r.niveis || '';
+    const cel = (v,i) => num(v) + (nv ? ` (N${nv[i]})` : '');
+    t += `<tr><td>${d}/${m}/${y}</td><td>${r.empresa}</td><td>${r.versao || '1.0'}</td><td>${cel(r.infra,0)}</td><td>${cel(r.dados,1)}</td><td>${cel(r.ferr,2)}</td><td>${cel(r.comp,3)}</td><td>${r.prioridade ? nomeDim(r.prioridade) : '—'}</td></tr>`;
+  });
+  el.innerHTML = t + '</table>';
+}
+
+/* ============ EXPORTAÇÃO DAS RESPOSTAS ============ */
+function exportar(){
+  if (!ultimo) return;
+  const { res, ordem, empresa, resp, dataStr, minutos, aviso } = ultimo;
+  const fb = retorno();
+  const q = s => `"${String(s).replace(/"/g,'""')}"`;
+  const linhas = [['campo','valor']];
+  linhas.push(['versao', VERSAO], ['empresa', empresa], ['respondente', resp], ['data', dataStr],
+              ['minutos', minutos || ''], ['aviso_consistencia', aviso ? 'sim' : 'nao']);
+  ITENS.forEach(i => linhas.push([i.c, respostas[i.c].dk ? 'nao_sei' : respostas[i.c].v]));
+  DIMS.forEach(d => {
+    linhas.push([d.id + '_media', num(res[d.id].media)], [d.id + '_nivel', res[d.id].nivel],
+                [d.id + '_limitrofe', res[d.id].limite ? 'sim' : 'nao']);
+  });
+  linhas.push(['ordem_prioridade', ordem.map(r => r.dim.id).join('>')],
+              ['utilidade_percebida', fb.util], ['decisao_primeira_dimensao', fb.decisao], ['dificuldade', fb.dificuldade]);
+  const csv = linhas.map(l => l.map(q).join(';')).join('\r\n');
+  const blob = new Blob(['﻿' + csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `idmrt-pp_${dataStr}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+/* ============ LIMPAR ============ */
+document.getElementById('limpar').addEventListener('click', () => {
+  Object.keys(respostas).forEach(k => delete respostas[k]);
+  form.reset();
+  inicio = null; avisoExibido = false; ultimo = null;
+  document.querySelectorAll('.opts label').forEach(l => l.classList.remove('on'));
+  document.querySelectorAll('.item').forEach(el => el.classList.remove('missing'));
+  document.getElementById('warn').hidden = true;
+  document.getElementById('check').hidden = true;
+  document.getElementById('report').hidden = true;
+  atualizarProgresso();
+  window.scrollTo({top:0, behavior:'smooth'});
+});
+
+/* ============ TEMA ============ */
+function aplicarTema(t){
+  document.documentElement.setAttribute('data-theme', t);
+  document.querySelectorAll('[data-theme-opt]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.themeOpt === t)));
+  try{ localStorage.setItem('idmrt-tema', t); }catch(e){}
+}
+document.querySelectorAll('[data-theme-opt]').forEach(b => b.addEventListener('click', () => aplicarTema(b.dataset.themeOpt)));
+aplicarTema(document.documentElement.getAttribute('data-theme') || 'auto');
+
+/* data de hoje por padrão */
+document.getElementById('data').value = new Date().toISOString().slice(0,10);
+atualizarProgresso();
+</script>
+</body>
+</html>
